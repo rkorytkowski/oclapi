@@ -661,8 +661,8 @@ class MappingVersionTest(MappingVersionBaseTest):
         collection_version.full_clean()
         collection_version.save()
 
-        self.assertEquals(len(mapping_version.collection_version_ids), 2)
-        self.assertEquals(mapping_version.collection_version_ids[1],
+        self.assertEquals(len(mapping_version.get_collection_version_ids()), 2)
+        self.assertEquals(mapping_version.get_collection_version_ids()[1],
                           CollectionVersion.objects.get(mnemonic='version1').id)
 
 

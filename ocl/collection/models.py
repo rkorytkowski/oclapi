@@ -245,6 +245,13 @@ class CollectionReference(models.Model):
         prev_expressions = map(lambda r: r.expression, _from)
         return filter(lambda ref: ref.expression not in prev_expressions, ctx)
 
+class CollectionItem(models.Model):
+    collection_id = models.TextField()
+    concept_id = models.TextField()
+    mapping_id = models.TextField()
+
+    class MongoMeta:
+        indexes = [[('collection_id', 1), ('concept_id', 1), ('mapping_id', 1)]]
 
 class CollectionVersion(ConceptContainerVersionModel):
     references = ListField(EmbeddedModelField('CollectionReference'))
@@ -270,50 +277,96 @@ class CollectionVersion(ConceptContainerVersionModel):
         super(CollectionVersion, self).save(**kwargs)
 
     def update_active_counts(self):
-        from concepts.models import ConceptVersion
-        self.active_concepts = ConceptVersion.objects.filter(id__in=self.concepts, retired=False).count()
-        from mappings.models import MappingVersion
-        self.active_mappings = MappingVersion.objects.filter(id__in=self.mappings, retired=False).count()
+        self.active_concepts = self.get_concepts().filter(retired=False).count()
+        self.active_mappings = self.get_mappings().filter(retired=False).count()
 
     def update_last_updates(self):
         self.last_concept_update = self.__get_last_concept_update()
         self.last_mapping_update = self.__get_last_mapping_update()
         self.last_child_update = self.__get_last_child_update()
-        
+
+    def _get_concept_ids(self):
+        return CollectionItem.objects.filter(collection_id=self.id).values_list('concept_id', flat=True)
+
     def get_concept_ids(self):
-        return self.concepts
+        """ Returns a list of concept version ids.
+        Prefer using get_concepts() or get_concepts(start, end) for fetching actual concepts.
+        """
+        return filter(None, self._get_concept_ids())
+
+    def get_concepts(self, start=None, end=None):
+        """ Use for efficient iteration over paginated concepts. Note that any filter will be applied only to concepts
+        from the given range. If you need to filter on all concepts, use get_concepts() without args.
+        In order to get the total concepts count, please use get_concepts_count().
+        """
+        from concepts.models import ConceptVersion
+        if start and end:
+            concept_ids = self._get_concept_ids()[start:end]
+        else:
+            concept_ids = self.get_concept_ids()
+        if concept_ids:
+            return ConceptVersion.objects.filter(id__in=filter(None, concept_ids))
+        else:
+            return ConceptVersion.objects.filter(id=None)
+
+    def get_concepts_count(self):
+        """ Returns a count of concepts.
+        """
+        return self._get_concepts_ids().count()
+
+    def _get_mapping_ids(self):
+        return CollectionItem.objects.filter(collection_id=self.id).values_list('mapping_id', flat=True)
 
     def get_mapping_ids(self):
-        return self.mappings
+        """ Returns a list of mapping version ids.
+        Prefer using get_mappings() or get_mappings(start, end) for fetching actual mappings
+        """
+        return filter(None, self._get_mapping_ids())
+
+    def get_mappings(self, start=None, end=None):
+        """ Use for efficient iteration over paginated mappings. Note that any filter will be applied only to mappings
+        from the given range. If you need to filter on all mappings, use get_mappings() without args
+        In order to get the total concepts count, please use get_mappings_count().
+        """
+        from mappings.models import MappingVersion
+        if start and end:
+            mapping_ids = self._get_mapping_ids()[start:end]
+        else:
+            mapping_ids = self.get_mapping_ids()
+        if mapping_ids:
+            return MappingVersion.objects.filter(id__in=filter(None, mapping_ids))
+        else:
+            return MappingVersion.objects.filter(id=None)
+
+    def get_mappings_count(self):
+        """ Returns a count of mappings.
+        """
+        return self._get_mappings_ids().count()
 
     def fill_data_for_reference(self, a_reference):
         if a_reference.concepts:
-            self.concepts = self.concepts + list([concept.id for concept in a_reference.concepts])
+            for concept in a_reference.concepts:
+                CollectionItem(collection_id=self.id, concept_id=concept.id).save()
+
         if a_reference.mappings:
-            self.mappings = self.mappings + list([mapping.id for mapping in a_reference.mappings])
+            for mapping in a_reference.mappings:
+                CollectionItem(collection_id=self.id, mapping_id=mapping.id).save()
+
         self.references.append(a_reference)
 
     def seed_concepts(self):
-        self._seed_resources('concepts', ConceptVersion)
+        seed_from = self.head_sibling()
+        if seed_from:
+            for concept_id in seed_from.get_concept_ids():
+                CollectionItem(collection_id=self.id, concept_id=concept_id).save()
+            self.save() #save to update counts
 
     def seed_mappings(self):
-        self._seed_resources('mappings', MappingVersion)
-
-    def _seed_resources(self, resource_type, resource_klass):
-        seed_mappings_from = self.head_sibling()
-        if seed_mappings_from:
-            resources = list(getattr(seed_mappings_from, resource_type))
-            result = list()
-
-            for resource_id in resources:
-                resource_latest_version = resource_klass.get_latest_version_by_id(resource_id)
-                if resource_latest_version:
-                    result.append(resource_latest_version.id)
-                else:
-                    result.append(resource_id)
-
-            setattr(self, resource_type, result)
-            self.save()
+        seed_from = self.head_sibling()
+        if seed_from:
+            for mapping_id in seed_from.get_mapping_ids():
+                CollectionItem(collection_id=self.id, mapping_id=mapping_id).save()
+            self.save() #save to update counts
 
     def seed_references(self):
         seed_references_from = self.head_sibling()
@@ -341,20 +394,14 @@ class CollectionVersion(ConceptContainerVersionModel):
         return last_concept_update or last_mapping_update or self.updated_at or timezone.now()
 
     def __get_last_concept_update(self):
-        if not self.concepts:
+        concepts = self.get_concepts()
+        if not concepts.exists():
             return None
-        klass = get_class('concepts.models.ConceptVersion')
-        versions = klass.objects.filter(id__in=self.concepts)
-        if not versions.exists():
-            return None
-        agg = versions.aggregate(Max('updated_at'))
+        agg = concepts.aggregate(Max('updated_at'))
         return agg.get('updated_at__max')
 
     def __get_last_mapping_update(self):
-        if not self.mappings:
-            return None
-        klass = get_class('mappings.models.MappingVersion')
-        mappings = klass.objects.filter(id__in=self.mappings)
+        mappings = self.get_mappings()
         if not mappings.exists():
             return None
         agg = mappings.aggregate(Max('updated_at'))

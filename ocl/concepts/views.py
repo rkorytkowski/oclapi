@@ -38,7 +38,7 @@ class ConceptBaseView(ChildResourceMixin):
     pk_field = 'mnemonic'
     model = Concept
     permission_classes = (CanViewParentDictionary,)
-    child_list_attribute = 'concepts'
+    child_list_attribute = 'get_concept_ids'
 
 
 class ConceptRetrieveUpdateDestroyView(ConceptBaseView, RetrieveAPIView,
@@ -211,7 +211,7 @@ class ConceptVersionMixin():
     model = ConceptVersion
     parent_resource_version_model = SourceVersion
     permission_classes = (CanViewParentDictionary,)
-    child_list_attribute = 'concepts'
+    child_list_attribute = 'get_concept_ids'
 
 
 class ConceptVersionListView(ConceptVersionMixin, VersionedResourceChildMixin,
