@@ -300,10 +300,8 @@ class ConceptVersion(ConceptValidationMixin, ResourceVersionModel):
         return self.source
 
     def get_collection_versions(self):
-        from collection.models import CollectionItem
-        collection_ids = CollectionItem.objects.filter(concept_id=self.id).values_list('collection_id', flat=True)
         from collection.models import CollectionVersion
-        return CollectionVersion.objects.filter(id__in=list(collection_ids))
+        return CollectionVersion.get_collection_versions_with_concept(self.id)
 
     @property
     def mappings_url(self):

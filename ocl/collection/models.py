@@ -285,14 +285,14 @@ class CollectionVersion(ConceptContainerVersionModel):
         self.last_mapping_update = self.__get_last_mapping_update()
         self.last_child_update = self.__get_last_child_update()
 
-    def _get_concept_ids(self):
-        return CollectionItem.objects.filter(collection_id=self.id).values_list('concept_id', flat=True)
+    def __get_concept_ids(self):
+        return CollectionItem.objects.filter(collection_id=self.id).exclude(concept_id='').values_list('concept_id', flat=True)
 
     def get_concept_ids(self):
         """ Returns a list of concept version ids.
         Prefer using get_concepts() or get_concepts(start, end) for fetching actual concepts.
         """
-        return filter(None, self._get_concept_ids())
+        return list(self.__get_concept_ids())
 
     def get_concepts(self, start=None, end=None):
         """ Use for efficient iteration over paginated concepts. Note that any filter will be applied only to concepts
@@ -301,27 +301,27 @@ class CollectionVersion(ConceptContainerVersionModel):
         """
         from concepts.models import ConceptVersion
         if start and end:
-            concept_ids = self._get_concept_ids()[start:end]
+            concept_ids = self.__get_concept_ids()[start:end]
         else:
             concept_ids = self.get_concept_ids()
         if concept_ids:
-            return ConceptVersion.objects.filter(id__in=filter(None, concept_ids))
+            return ConceptVersion.objects.filter(id__in=concept_ids)
         else:
             return ConceptVersion.objects.filter(id=None)
 
     def get_concepts_count(self):
         """ Returns a count of concepts.
         """
-        return self._get_concepts_ids().count()
+        return self.__get_concepts_ids().count()
 
-    def _get_mapping_ids(self):
-        return CollectionItem.objects.filter(collection_id=self.id).values_list('mapping_id', flat=True)
+    def __get_mapping_ids(self):
+        return CollectionItem.objects.filter(collection_id=self.id).exclude(mapping_id='').values_list('mapping_id', flat=True)
 
     def get_mapping_ids(self):
         """ Returns a list of mapping version ids.
         Prefer using get_mappings() or get_mappings(start, end) for fetching actual mappings
         """
-        return filter(None, self._get_mapping_ids())
+        return list(self.__get_mapping_ids())
 
     def get_mappings(self, start=None, end=None):
         """ Use for efficient iteration over paginated mappings. Note that any filter will be applied only to mappings
@@ -330,18 +330,18 @@ class CollectionVersion(ConceptContainerVersionModel):
         """
         from mappings.models import MappingVersion
         if start and end:
-            mapping_ids = self._get_mapping_ids()[start:end]
+            mapping_ids = self.__get_mapping_ids()[start:end]
         else:
             mapping_ids = self.get_mapping_ids()
         if mapping_ids:
-            return MappingVersion.objects.filter(id__in=filter(None, mapping_ids))
+            return MappingVersion.objects.filter(id__in=mapping_ids)
         else:
             return MappingVersion.objects.filter(id=None)
 
     def get_mappings_count(self):
         """ Returns a count of mappings.
         """
-        return self._get_mappings_ids().count()
+        return self.__get_mappings_ids().count()
 
     def fill_data_for_reference(self, a_reference):
         if a_reference.concepts:
@@ -409,6 +409,16 @@ class CollectionVersion(ConceptContainerVersionModel):
 
     def head_sibling(self):
         return CollectionVersion.objects.get(mnemonic=HEAD, versioned_object_id=self.versioned_object_id)
+
+    @classmethod
+    def get_collection_versions_with_concept(cls, concept_id):
+        collection_ids = CollectionItem.objects.filter(concept_id=concept_id).values_list('collection_id', flat=True)
+        return CollectionVersion.objects.filter(id__in=list(collection_ids))
+
+    @classmethod
+    def get_collection_versions_with_mapping(cls, mapping_id):
+        collection_ids = CollectionItem.objects.filter(mapping_id=mapping_id).values_list('collection_id', flat=True)
+        return CollectionVersion.objects.filter(id__in=list(collection_ids))
 
     @classmethod
     def persist_new(cls, obj, user=None, **kwargs):

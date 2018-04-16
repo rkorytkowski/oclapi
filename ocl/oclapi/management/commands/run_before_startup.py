@@ -26,14 +26,18 @@ class Command(BaseCommand):
 
         print 'Migrating concepts and mappings in collections to a new model'
         for collection_version in CollectionVersion.objects.all():
+            already_migrated = True
             for concept in collection_version.concepts:
+                already_migrated = False
                 CollectionItem(collection_id=collection_version.id, concept_id=concept).save()
             for mapping in collection_version.mappings:
+                already_migrated = False
                 CollectionItem(collection_id=collection_version.id, mapping_id=mapping).save()
 
-            collection_version.concepts = []
-            collection_version.mappings = []
-            collection_version.save()
+            if not already_migrated:
+                collection_version.concepts = []
+                collection_version.mappings = []
+                collection_version.save()
 
     def clear_all_processing(self):
         ConceptContainerVersionModel.clear_all_processing(SourceVersion)
