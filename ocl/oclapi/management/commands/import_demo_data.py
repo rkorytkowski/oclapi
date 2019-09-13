@@ -16,7 +16,7 @@ class Command(BaseCommand):
     help = 'import demo data'
 
     def handle(self, *args, **options):
-        user = self.create_admin_user()
+        user = self.create_admin    _user()
 
         org = self.create_organization(user, 'CIEL')
 
