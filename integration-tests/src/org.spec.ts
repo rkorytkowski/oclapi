@@ -21,13 +21,13 @@ describe('Org', () => {
 
         expect(json).toEqual(expect.arrayContaining([ helper.toOrg('OCL', 'Open Concept Lab'),
             helper.toOrg(helper.viewOrg), helper.toOrg(helper.editOrg)]));
-        expect(json).toEqual(expect.not.arrayContaining([ helper.toOrg(helper.nonPublicOrg) ]));
-        expect(json).toEqual(expect.not.arrayContaining([ helper.toOrg(helper.nonPublicAdminOrg) ]));
+        expect(json).toEqual(expect.not.arrayContaining([ helper.toOrg(helper.privateOrg) ]));
+        expect(json).toEqual(expect.not.arrayContaining([ helper.toOrg(helper.privateAdminOrg) ]));
     });
 
     it('should not be created by anonymous', async () => {
         const orgId = helper.newId('Org');
-        const orgUrl = helper.toUrl('orgs', orgId);
+        const orgUrl = helper.joinUrl('orgs', orgId);
         helper.cleanup(orgUrl);
         const res = await helper.postOrg(orgId, null);
         expect(res.status).toBe(401);
@@ -49,13 +49,13 @@ describe('Org', () => {
     });
 
     it('with none access should not be updated by anonymous', async () => {
-        const res = await helper.post(helper.nonPublicOrg, {'name': 'test'});
+        const res = await helper.post(helper.privateOrg, {'name': 'test'});
         expect(res.status).toBe(404);
 
         const res2 = await helper.get('orgs/', helper.adminToken);
         const json = await res2.json();
 
-        expect(json).toEqual(expect.arrayContaining([ helper.toOrg(helper.nonPublicOrg) ]));
+        expect(json).toEqual(expect.arrayContaining([ helper.toOrg(helper.privateOrg) ]));
     });
 
     it('with view access should not be updated by anonymous', async () => {
@@ -89,13 +89,13 @@ describe('Org', () => {
     });
 
     it('with none access should not be deleted by anonymous', async () => {
-        const res = await helper.del(helper.nonPublicOrgUrl);
+        const res = await helper.del(helper.privateOrgUrl);
         expect(res.status).toBe(401);
 
         const res2 = await helper.get('orgs/', helper.adminToken);
         const json = await res2.json();
 
-        expect(json).toEqual(expect.arrayContaining([ helper.toOrg(helper.nonPublicOrg)]));
+        expect(json).toEqual(expect.arrayContaining([ helper.toOrg(helper.privateOrg)]));
     });
 
     it('with view access should not be deleted by anonymous', async () => {
@@ -124,13 +124,13 @@ describe('Org', () => {
         expect(res.status).toBe(200);
         const json = await res.json();
         expect(json).toEqual(expect.arrayContaining([ helper.toOrg('OCL', 'Open Concept Lab'),
-            helper.toOrg(helper.nonPublicOrg), helper.toOrg(helper.nonPublicAdminOrg),
+            helper.toOrg(helper.privateOrg), helper.toOrg(helper.privateAdminOrg),
             helper.toOrg(helper.viewOrg), helper.toOrg(helper.editOrg)]));
     });
 
     it('should be updated by staff', async () => {
         const orgId = helper.newId('Org')
-        const orgUrl = helper.toUrl('orgs', orgId);
+        const orgUrl = helper.joinUrl('orgs', orgId);
         await helper.postOrg(orgId, helper.regularMemberUserToken);
         helper.cleanup(orgUrl);
 
@@ -142,7 +142,7 @@ describe('Org', () => {
 
     it('with none access should be updated by staff', async () => {
         const orgId = helper.newId('Org')
-        const orgUrl = helper.toUrl('orgs', orgId);
+        const orgUrl = helper.joinUrl('orgs', orgId);
         await helper.postOrg(orgId, helper.regularMemberUserToken, 'None');
         helper.cleanup(orgUrl);
 
@@ -154,7 +154,7 @@ describe('Org', () => {
 
     it('with view access should be updated by staff', async () => {
         const orgId = helper.newId('Org')
-        const orgUrl = helper.toUrl('orgs', orgId);
+        const orgUrl = helper.joinUrl('orgs', orgId);
         await helper.postOrg(orgId, helper.regularMemberUserToken, 'View');
         helper.cleanup(orgUrl);
 
@@ -166,7 +166,7 @@ describe('Org', () => {
 
     it('with edit access should be updated by staff', async () => {
         const orgId = helper.newId('Org')
-        const orgUrl = helper.toUrl('orgs', orgId);
+        const orgUrl = helper.joinUrl('orgs', orgId);
         await helper.postOrg(orgId, helper.regularMemberUserToken, 'Edit');
         helper.cleanup(orgUrl);
 
@@ -178,7 +178,7 @@ describe('Org', () => {
 
     it('should be deleted by staff', async () => {
         const orgId = helper.newId('Org')
-        const orgUrl = helper.toUrl('orgs', orgId);
+        const orgUrl = helper.joinUrl('orgs', orgId);
         const res = await helper.postOrg(orgId, helper.regularMemberUserToken);
         helper.cleanup(orgUrl);
 
@@ -194,7 +194,7 @@ describe('Org', () => {
 
     it('with none access should be deleted by staff', async () => {
         const orgId = helper.newId('Org')
-        const orgUrl = helper.toUrl('orgs', orgId);
+        const orgUrl = helper.joinUrl('orgs', orgId);
         const res = await helper.postOrg(orgId, helper.regularMemberUserToken, 'None');
         helper.cleanup(orgUrl);
 
@@ -210,7 +210,7 @@ describe('Org', () => {
 
     it('with view access should be deleted by staff', async () => {
         const orgId = helper.newId('Org')
-        const orgUrl = helper.toUrl('orgs', orgId);
+        const orgUrl = helper.joinUrl('orgs', orgId);
         const res = await helper.postOrg(orgId, helper.regularMemberUserToken, 'View');
         helper.cleanup(orgUrl);
 
@@ -226,7 +226,7 @@ describe('Org', () => {
 
     it('with edit access should be deleted by staff', async () => {
         const orgId = helper.newId('Org')
-        const orgUrl = helper.toUrl('orgs', orgId);
+        const orgUrl = helper.joinUrl('orgs', orgId);
         const res = await helper.postOrg(orgId, helper.regularMemberUserToken, 'Edit');
         helper.cleanup(orgUrl);
 
@@ -246,13 +246,13 @@ describe('Org', () => {
         expect(res.status).toBe(200);
         const json = await res.json();
         expect(json).toEqual(expect.arrayContaining([ helper.toOrg('OCL', 'Open Concept Lab'),
-            helper.toOrg(helper.nonPublicOrg), helper.toOrg(helper.viewOrg), helper.toOrg(helper.editOrg) ]));
-        expect(json).toEqual(expect.not.arrayContaining([ helper.toOrg(helper.nonPublicAdminOrg) ]));
+            helper.toOrg(helper.privateOrg), helper.toOrg(helper.viewOrg), helper.toOrg(helper.editOrg) ]));
+        expect(json).toEqual(expect.not.arrayContaining([ helper.toOrg(helper.privateAdminOrg) ]));
     });
 
     it('should be updated by authenticated member', async () => {
         const orgId = helper.newId('Org');
-        const orgUrl = helper.toUrl('orgs', orgId);
+        const orgUrl = helper.joinUrl('orgs', orgId);
         await helper.postOrg(orgId, helper.regularMemberUserToken);
         helper.cleanup(orgUrl);
 
@@ -264,7 +264,7 @@ describe('Org', () => {
 
     it('with none access should be updated by authenticated member', async () => {
         const orgId = helper.newId('Org');
-        const orgUrl = helper.toUrl('orgs', orgId);
+        const orgUrl = helper.joinUrl('orgs', orgId);
         await helper.postOrg(orgId, helper.regularMemberUserToken, 'None');
         helper.cleanup(orgUrl);
 
@@ -277,7 +277,7 @@ describe('Org', () => {
 
     it('with view access should be updated by authenticated member', async () => {
         const orgId = helper.newId('Org');
-        const orgUrl = helper.toUrl('orgs', orgId);
+        const orgUrl = helper.joinUrl('orgs', orgId);
         await helper.postOrg(orgId, helper.regularMemberUserToken, 'View');
         helper.cleanup(orgUrl);
 
@@ -289,7 +289,7 @@ describe('Org', () => {
 
     it('with edit access should be updated by authenticated member', async () => {
         const orgId = helper.newId('Org');
-        const orgUrl = helper.toUrl('orgs', orgId);
+        const orgUrl = helper.joinUrl('orgs', orgId);
         await helper.postOrg(orgId, helper.regularMemberUserToken, 'Edit');
         helper.cleanup(orgUrl);
 
@@ -301,7 +301,7 @@ describe('Org', () => {
 
     it('should not be deleted by authenticated member', async () => {
         const orgId = helper.newId('Org')
-        const orgUrl = helper.toUrl('orgs', orgId);
+        const orgUrl = helper.joinUrl('orgs', orgId);
         const res = await helper.postOrg(orgId, helper.regularMemberUserToken);
         helper.cleanup(orgUrl);
 
@@ -319,7 +319,7 @@ describe('Org', () => {
 
     it('with none access should not be deleted by authenticated member', async () => {
         const orgId = helper.newId('Org')
-        const orgUrl = helper.toUrl('orgs', orgId);
+        const orgUrl = helper.joinUrl('orgs', orgId);
         const res = await helper.postOrg(orgId, helper.regularMemberUserToken, 'None');
         helper.cleanup(orgUrl);
 
@@ -337,7 +337,7 @@ describe('Org', () => {
 
     it('with view access should not be deleted by authenticated member', async () => {
         const orgId = helper.newId('Org')
-        const orgUrl = helper.toUrl('orgs', orgId);
+        const orgUrl = helper.joinUrl('orgs', orgId);
         const res = await helper.postOrg(orgId, helper.regularMemberUserToken, 'View');
         helper.cleanup(orgUrl);
 
@@ -355,7 +355,7 @@ describe('Org', () => {
 
     it('with edit access should not be deleted by authenticated member', async () => {
         const orgId = helper.newId('Org')
-        const orgUrl = helper.toUrl('orgs', orgId);
+        const orgUrl = helper.joinUrl('orgs', orgId);
         const res = await helper.postOrg(orgId, helper.regularMemberUserToken, 'Edit');
         helper.cleanup(orgUrl);
 
@@ -379,8 +379,8 @@ describe('Org', () => {
         const json = await res.json();
         expect(json).toEqual(expect.arrayContaining([ helper.toOrg('OCL', 'Open Concept Lab'),
             helper.toOrg(helper.editOrg), helper.toOrg(helper.viewOrg)]));
-        expect(json).toEqual(expect.not.arrayContaining([ helper.toOrg(helper.nonPublicAdminOrg),
-            helper.toOrg(helper.nonPublicOrg) ]));
+        expect(json).toEqual(expect.not.arrayContaining([ helper.toOrg(helper.privateAdminOrg),
+            helper.toOrg(helper.privateOrg) ]));
     });
 
     it('should not be updated by authenticated nonmember', async () => {
@@ -396,13 +396,13 @@ describe('Org', () => {
 
     it('with none access should not be updated by authenticated nonmember', async () => {
         const org = helper.newId('Org');
-        const res = await helper.post(helper.nonPublicOrgUrl, {'name': org}, helper.regularNonMemberUserToken);
+        const res = await helper.post(helper.privateOrgUrl, {'name': org}, helper.regularNonMemberUserToken);
         expect(res.status).toBe(403);
 
         const res2 = await helper.get('orgs/', helper.adminToken);
         const json = await res2.json();
 
-        expect(json).toEqual(expect.arrayContaining([ helper.toOrg(helper.nonPublicOrg) ]));
+        expect(json).toEqual(expect.arrayContaining([ helper.toOrg(helper.privateOrg) ]));
     });
 
     it('with view access should not be updated by authenticated nonmember', async () => {
@@ -418,7 +418,7 @@ describe('Org', () => {
 
     it('with edit access should be updated by authenticated nonmember', async () => {
         const orgId = helper.newId('Org')
-        const orgUrl = helper.toUrl('orgs', orgId);
+        const orgUrl = helper.joinUrl('orgs', orgId);
         await helper.postOrg(orgId, helper.regularMemberUserToken, 'Edit');
         helper.cleanup(orgUrl);
 
@@ -443,13 +443,13 @@ describe('Org', () => {
     });
 
     it('with none access should not be deleted by authenticated nonmember', async () => {
-        const res = await helper.del(helper.nonPublicOrgUrl, helper.regularNonMemberUserToken);
+        const res = await helper.del(helper.privateOrgUrl, helper.regularNonMemberUserToken);
         expect(res.status).toBe(403);
 
         const res2 = await helper.get('orgs/', helper.adminToken);
         const json = await res2.json();
 
-        expect(json).toEqual(expect.arrayContaining([ helper.toOrg(helper.nonPublicOrg) ]));
+        expect(json).toEqual(expect.arrayContaining([ helper.toOrg(helper.privateOrg) ]));
     });
 
     it('with view access should not be deleted by authenticated nonmember', async () => {
